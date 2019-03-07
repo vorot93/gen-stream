@@ -196,3 +196,5 @@ where
         })
     }
 }
+
+impl<G: Unpin> Unpin for GenTryStream<G> {}
