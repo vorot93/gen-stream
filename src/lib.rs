@@ -26,7 +26,7 @@
 //! #![feature(gen_future)]
 //!
 //! use futures::{
-//!     compat::{Stream01CompatExt},
+//!     compat::Stream01CompatExt,
 //!     executor::block_on,
 //!     prelude::*,
 //!     task::Poll,
