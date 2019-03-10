@@ -34,7 +34,7 @@
 //!     task::Poll,
 //! };
 //! use gen_stream::{gen_await, GenStreamNoReturn};
-//! use std::{ops::Generator, pin::Pin, time::{Duration, SystemTime}};
+//! use std::{ops::Generator, time::{Duration, SystemTime}};
 //! use tokio::{runtime::current_thread::Runtime, timer::Interval};
 //!
 //! fn current_time() -> impl Generator<Yield = Poll<SystemTime>, Return = !> {
@@ -84,6 +84,8 @@ use pin_utils::unsafe_pinned;
 #[macro_export]
 macro_rules! gen_await {
     ($e:expr) => {{
+        use core::pin::Pin;
+
         let mut pinned = $e;
         loop {
             if let Poll::Ready(x) =
