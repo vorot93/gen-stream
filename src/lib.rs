@@ -33,7 +33,7 @@
 //!     prelude::*,
 //!     task::Poll,
 //! };
-//! use gen_stream::{gen_await, GenStreamNoReturn};
+//! use gen_stream::{gen_await, GenPerpetualStream};
 //! use std::{ops::Generator, time::{Duration, SystemTime}};
 //! use tokio::{runtime::current_thread::Runtime, timer::Interval};
 //!
@@ -50,7 +50,7 @@
 //! }
 //!
 //! fn main() {
-//!     let mut time_streamer = GenStreamNoReturn::from(Box::pin(current_time()));
+//!     let mut time_streamer = GenPerpetualStream::from(Box::pin(current_time()));
 //!
 //!     let mut rt = Runtime::new().unwrap();
 //!     rt.spawn(Compat::new(async move {
@@ -129,22 +129,22 @@ where
 
 impl<G: Unpin> Unpin for GenStream<G> {}
 
-/// Stream based on generator that never returns.
-pub struct GenStreamNoReturn<G> {
+/// Stream based on generator that never ends.
+pub struct GenPerpetualStream<G> {
     inner: G,
 }
 
-impl<G> GenStreamNoReturn<G> {
+impl<G> GenPerpetualStream<G> {
     unsafe_pinned!(inner: G);
 }
 
-impl<G> From<G> for GenStreamNoReturn<G> {
+impl<G> From<G> for GenPerpetualStream<G> {
     fn from(inner: G) -> Self {
         Self { inner }
     }
 }
 
-impl<G, Y> Stream for GenStreamNoReturn<G>
+impl<G, Y> Stream for GenPerpetualStream<G>
 where
     G: Generator<Yield = Poll<Y>, Return = !>,
 {
@@ -158,7 +158,7 @@ where
     }
 }
 
-impl<G: Unpin> Unpin for GenStreamNoReturn<G> {}
+impl<G: Unpin> Unpin for GenPerpetualStream<G> {}
 
 /// Stream based on generator that may fail.
 pub struct GenTryStream<G> {
