@@ -182,7 +182,7 @@ impl<G> From<G> for GenTryStream<G> {
 
 impl<G, T, E> Stream for GenTryStream<G>
 where
-    G: Generator<Yield = Poll<Result<T, E>>, Return = Result<(), E>>,
+    G: Generator<Yield = Poll<T>, Return = Result<(), E>>,
 {
     type Item = Result<T, E>;
 
@@ -192,7 +192,7 @@ where
         }
 
         set_task_waker(waker, || match self.as_mut().inner().resume() {
-            GeneratorState::Yielded(v) => v.map(Some),
+            GeneratorState::Yielded(v) => v.map(Ok).map(Some),
             GeneratorState::Complete(res) => {
                 self.as_mut().finished().set(true);
 
