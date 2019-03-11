@@ -23,6 +23,8 @@ gen-stream = "0.2"
 ### Example
 
 ```rust
+#![feature(async_await)]
+#![feature(await_macro)]
 #![feature(futures_api)]
 #![feature(never_type)]
 #![feature(generators)]
@@ -30,22 +32,20 @@ gen-stream = "0.2"
 #![feature(gen_future)]
 
 use futures::{
-    compat::{Stream01CompatExt},
-    executor::block_on,
+    compat::*,
     prelude::*,
     task::Poll,
 };
-use gen_stream::{gen_await, GenStreamNoReturn};
-use std::{ops::Generator, pin::Pin, time::{Duration, SystemTime}};
-use tokio::timer::Interval;
+use gen_stream::{gen_await, GenPerpetualStream};
+use std::{ops::Generator, time::{Duration, SystemTime}};
+use tokio::{runtime::current_thread::Runtime, timer::Interval};
 
 fn current_time() -> impl Generator<Yield = Poll<SystemTime>, Return = !> {
-    move || {
-        let mut i = Interval::new_interval(Duration::from_secs(2)).compat();
+    static move || {
+        let mut i = Interval::new_interval(Duration::from_millis(500)).compat();
 
         loop {
-            let (_, s) = gen_await!(i.into_future());
-            i = s;
+            let _ = gen_await!(i.next()).unwrap().unwrap();
 
             yield Poll::Ready(SystemTime::now());
         }
@@ -53,12 +53,18 @@ fn current_time() -> impl Generator<Yield = Poll<SystemTime>, Return = !> {
 }
 
 fn main() {
-    let mut time_streamer = GenStreamNoReturn::from(current_time());
+    let mut time_streamer = GenPerpetualStream::from(Box::pin(current_time()));
 
-    for _ in 0..10 {
-        let current_time = block_on(time_streamer.next());
-        println!("Current time is {:?}", current_time);
-    }
+    let mut rt = Runtime::new().unwrap();
+    rt.spawn(Compat::new(async move {
+        for _ in 0..3 {
+            let current_time = await!(time_streamer.next());
+            println!("Current time is {:?}", current_time);
+        }
+
+        Ok(())
+    }.boxed()));
+    rt.run();
 }
 ```
 
