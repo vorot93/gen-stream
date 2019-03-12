@@ -83,16 +83,14 @@ use pin_utils::unsafe_pinned;
 #[macro_export]
 macro_rules! gen_await {
     ($e:expr) => {{
-        use core::pin::Pin;
-
         let mut pinned = $e;
         loop {
-            if let Poll::Ready(x) =
-                std::future::poll_with_tls_waker(unsafe { Pin::new_unchecked(&mut pinned) })
+            if let ::core::task::Poll::Ready(x) =
+                std::future::poll_with_tls_waker(unsafe { ::core::pin::Pin::new_unchecked(&mut pinned) })
             {
                 break x;
             }
-            yield Poll::Pending;
+            yield ::core::task::Poll::Pending;
         }
     }};
 }
