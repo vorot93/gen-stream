@@ -27,14 +27,16 @@
 //! #![feature(generator_trait)]
 //! #![feature(gen_future)]
 //!
-//! use futures::{
-//!     compat::*,
-//!     prelude::*,
-//!     task::Poll,
+//! use {
+//!     futures::{
+//!         compat::*,
+//!         prelude::*,
+//!         task::Poll,
+//!     },
+//!     gen_stream::{gen_await, GenPerpetualStream},
+//!     std::{ops::Generator, time::{Duration, SystemTime}},
+//!     tokio::{runtime::current_thread::Runtime, timer::Interval},
 //! };
-//! use gen_stream::{gen_await, GenPerpetualStream};
-//! use std::{ops::Generator, time::{Duration, SystemTime}};
-//! use tokio::{runtime::current_thread::Runtime, timer::Interval};
 //!
 //! fn current_time() -> impl Generator<Yield = Poll<SystemTime>, Return = !> {
 //!     static move || {
@@ -69,15 +71,16 @@
 #![feature(gen_future)]
 #![feature(never_type)]
 
-use core::{
-    ops::{Generator, GeneratorState},
-    pin::Pin,
-    task::{Poll, Waker},
+use {
+    core::{
+        ops::{Generator, GeneratorState},
+        pin::Pin,
+        task::{Context, Poll},
+    },
+    futures_core::*,
+    pin_utils::unsafe_pinned,
+    std::future::set_task_context,
 };
-use std::future::set_task_waker;
-
-use futures::prelude::*;
-use pin_utils::unsafe_pinned;
 
 /// Like await!() but for bare generators.
 #[macro_export]
@@ -85,9 +88,9 @@ macro_rules! gen_await {
     ($e:expr) => {{
         let mut pinned = $e;
         loop {
-            if let ::core::task::Poll::Ready(x) =
-                std::future::poll_with_tls_waker(unsafe { ::core::pin::Pin::new_unchecked(&mut pinned) })
-            {
+            if let ::core::task::Poll::Ready(x) = std::future::poll_with_tls_context(unsafe {
+                ::core::pin::Pin::new_unchecked(&mut pinned)
+            }) {
                 break x;
             }
             yield ::core::task::Poll::Pending;
@@ -116,8 +119,8 @@ where
 {
     type Item = Y;
 
-    fn poll_next(self: Pin<&mut Self>, waker: &Waker) -> Poll<Option<Self::Item>> {
-        set_task_waker(waker, || match self.inner().resume() {
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        set_task_context(cx, || match self.inner().resume() {
             GeneratorState::Yielded(v) => v.map(Some),
             GeneratorState::Complete(_) => Poll::Ready(None),
         })
@@ -147,8 +150,8 @@ where
 {
     type Item = Y;
 
-    fn poll_next(self: Pin<&mut Self>, waker: &Waker) -> Poll<Option<Self::Item>> {
-        set_task_waker(waker, || match self.inner().resume() {
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        set_task_context(cx, || match self.inner().resume() {
             GeneratorState::Yielded(v) => v.map(Some),
             GeneratorState::Complete(_) => unreachable!(),
         })
@@ -183,12 +186,12 @@ where
 {
     type Item = Result<T, E>;
 
-    fn poll_next(mut self: Pin<&mut Self>, waker: &Waker) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         if self.finished {
             return Poll::Ready(None);
         }
 
-        set_task_waker(waker, || match self.as_mut().inner().resume() {
+        set_task_context(cx, || match self.as_mut().inner().resume() {
             GeneratorState::Yielded(v) => v.map(Ok).map(Some),
             GeneratorState::Complete(res) => {
                 self.as_mut().finished().set(true);

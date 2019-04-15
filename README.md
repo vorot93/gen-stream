@@ -31,14 +31,16 @@ gen-stream = "0.2"
 #![feature(generator_trait)]
 #![feature(gen_future)]
 
-use futures::{
-    compat::*,
-    prelude::*,
-    task::Poll,
+use {
+    futures::{
+        compat::*,
+        prelude::*,
+        task::Poll,
+    },
+    gen_stream::{gen_await, GenPerpetualStream},
+    std::{ops::Generator, time::{Duration, SystemTime}},
+    tokio::{runtime::current_thread::Runtime, timer::Interval},
 };
-use gen_stream::{gen_await, GenPerpetualStream};
-use std::{ops::Generator, time::{Duration, SystemTime}};
-use tokio::{runtime::current_thread::Runtime, timer::Interval};
 
 fn current_time() -> impl Generator<Yield = Poll<SystemTime>, Return = !> {
     static move || {
