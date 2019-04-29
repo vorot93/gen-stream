@@ -25,7 +25,6 @@ gen-stream = "0.2"
 ```rust
 #![feature(async_await)]
 #![feature(await_macro)]
-#![feature(futures_api)]
 #![feature(never_type)]
 #![feature(generators)]
 #![feature(generator_trait)]
