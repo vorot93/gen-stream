@@ -8,7 +8,7 @@
 //! Just write your own generator and wrap it in one of GenStreams.
 //!
 //! ## How can I use this?
-//! You need the latest Rust nightly, tested to be working as of `nightly-2019-03-02`.
+//! You need Rust nightly 2019-05-09 or later.
 //!
 //! Add this to Cargo.toml:
 //!
@@ -20,7 +20,6 @@
 //!
 //! ```rust
 //! #![feature(async_await)]
-//! #![feature(await_macro)]
 //! #![feature(never_type)]
 //! #![feature(generators)]
 //! #![feature(generator_trait)]
@@ -55,7 +54,7 @@
 //!     let mut rt = Runtime::new().unwrap();
 //!     rt.spawn(Compat::new(async move {
 //!         for _ in 0..3 {
-//!             let current_time = await!(time_streamer.next());
+//!             let current_time = time_streamer.next().await;
 //!             println!("Current time is {:?}", current_time);
 //!         }
 //!
